@@ -40,10 +40,8 @@ os.makedirs("opex_capex_documents", exist_ok=True)
 
 
 LOGO_FILE_NAME = "polaris_digitech_logo.png"
-LOGO_PATH = os.path.join(ICON_BASE_DIR, LOGO_FILE_NAME)
+LOGO_PATH = "Project_Resources/polaris_digitech_logo.png" # Direct string path
 
-ABDULAHI_IMAGE_FILE_NAME = "abdulahi_image.png"
-ABDULAHI_IMAGE_PATH = os.path.join(ICON_BASE_DIR, ABDULAHI_IMAGE_FILE_NAME)
 
 # --- Define Approval Route Roles and simulate emails (Updated to fetch from users) ---
 # These are the *stages* in the approval chain, mapped to department/grade levels
