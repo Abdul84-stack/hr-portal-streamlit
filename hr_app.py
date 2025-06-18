@@ -34,11 +34,6 @@ ICON_BASE_DIR = "Project_Resources" # Assuming you create this folder and put im
 if not os.path.exists(ICON_BASE_DIR):
     os.makedirs(ICON_BASE_DIR)
 
-# Ensure 'leave_documents' and 'opex_capex_documents' directories exist for file uploads
-os.makedirs("leave_documents", exist_ok=True)
-os.makedirs("opex_capex_documents", exist_ok=True)
-
-
 LOGO_FILE_NAME = "polaris_digitech_logo.png"
 LOGO_PATH = os.path.join(ICON_BASE_DIR, LOGO_FILE_NAME)
 
@@ -46,22 +41,7 @@ ABDULAHI_IMAGE_FILE_NAME = "abdulahi_image.png"
 ABDULAHI_IMAGE_PATH = os.path.join(ICON_BASE_DIR, ABDULAHI_IMAGE_FILE_NAME)
 
 # --- Define Approval Route Roles and simulate emails (Updated to fetch from users) ---
-# These are the *stages* in the approval chain, mapped to department/grade levels
-# The order here defines the sequence of approval for OPEX/CAPEX
-APPROVAL_CHAIN = [
-    {"role_name": "Admin Manager", "department": "Administration", "grade_level": "Manager"},
-    {"role_name": "HR Manager", "department": "HR", "grade_level": "Manager"},
-    {"role_name": "Finance Manager", "department": "Finance", "grade_level": "Manager"},
-    {"role_name": "MD", "department": "Executive", "grade_level": "MD"} # MD is assumed to be in Executive department
-]
-
-# Helper function to get an approver's full name based on department and grade level
-def get_approver_name_by_criteria(users, department, grade_level):
-    for user in users:
-        profile = user.get('profile', {})
-        if profile.get('department') == department and profile.get('grade_level') == grade_level:
-            return profile.get('name')
-    return None # Or raise an error if an approver is strictly required
+APPROVAL_ROLES = ["Admin", "HR", "Finance", "MD"] # These correspond to departments for approval logic
 
 # --- Data Loading/Saving Functions ---
 class DateEncoder(json.JSONEncoder):
@@ -92,7 +72,7 @@ def save_uploaded_file(uploaded_file, destination_folder="uploaded_documents"):
     if uploaded_file is not None:
         if not os.path.exists(destination_folder):
             os.makedirs(destination_folder)
-            
+        
         file_path = os.path.join(destination_folder, uploaded_file.name)
         with open(file_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
@@ -103,18 +83,18 @@ def save_uploaded_file(uploaded_file, destination_folder="uploaded_documents"):
 def setup_initial_data():
     # Initial Users (Admin + 6 Staff Members)
     initial_users = [
-        # Admin User (can act as MD and Admin Manager for initial setup if no other specific user)
+        # Admin User
         {
             "username": "abdul_bolaji@yahoo.com",
             "password": pbkdf2_sha256.hash("admin123"), # Hashed password
-            "role": "admin", # This role grants access to admin functions
+            "role": "admin",
             "staff_id": "ADM/2024/000",
             "profile": {
                 "name": "Abdul Bolaji (Admin)",
                 "date_of_birth": "1980-01-01",
                 "gender": "Male",
-                "grade_level": "MD", # This user can act as MD approver
-                "department": "Executive", # This user can act as MD approver, also Admin manager for the purpose of this demo
+                "grade_level": "MD",
+                "department": "Admin",
                 "education_background": "MBA, Computer Science",
                 "professional_experience": "15+ years in IT Management",
                 "address": "123 Admin Lane, Lagos",
@@ -133,13 +113,13 @@ def setup_initial_data():
             "profile": {
                 "name": "Ada Ama",
                 "date_of_birth": "1995-01-01",
-                "gender": "Female", # Corrected from Male in table
-                "grade_level": "Officer", 
-                "department": "Marketing", 
-                "education_background": "BSc. Marketing",
-                "professional_experience": "5 years in digital marketing",
-                "address": "456 Market St, Abuja",
-                "phone_number": "+2348023456789",
+                "gender": "Male", # Corrected from Male in table
+                "grade_level": "MD", # This is a grade level not a role in a typical HR system.
+                "department": "Executive", # This is a department not a role in a typical HR system.
+                "education_background": "",
+                "professional_experience": "",
+                "address": "",
+                "phone_number": "",
                 "email_address": "ada.ama@example.com",
                 "training_attended": [],
                 "work_anniversary": "2024-01-15"
@@ -154,12 +134,12 @@ def setup_initial_data():
                 "name": "Udu Aka",
                 "date_of_birth": "2000-02-01",
                 "gender": "Male",
-                "grade_level": "Manager", # This user can act as Finance Manager approver
+                "grade_level": "Manager",
                 "department": "Finance",
-                "education_background": "ACA, B.Acc",
-                "professional_experience": "8 years in financial management",
-                "address": "789 Bank Rd, Lagos",
-                "phone_number": "+2348034567890",
+                "education_background": "",
+                "professional_experience": "",
+                "address": "",
+                "phone_number": "",
                 "email_address": "udu.aka@example.com",
                 "training_attended": [],
                 "work_anniversary": "2024-03-01"
@@ -173,13 +153,13 @@ def setup_initial_data():
             "profile": {
                 "name": "Abdulahi Ibrahim",
                 "date_of_birth": "1998-03-03",
-                "gender": "Male", # Corrected from Female
-                "grade_level": "Manager", # This user can act as Admin Manager approver
+                "gender": "Female",
+                "grade_level": "Manager",
                 "department": "Administration",
-                "education_background": "B.A. Public Admin",
-                "professional_experience": "6 years in office administration",
-                "address": "101 Admin Way, Port Harcourt",
-                "phone_number": "+2348045678901",
+                "education_background": "",
+                "professional_experience": "",
+                "address": "",
+                "phone_number": "",
                 "email_address": "abdulahi.ibrahim@example.com",
                 "training_attended": [],
                 "work_anniversary": "2024-02-10"
@@ -189,17 +169,17 @@ def setup_initial_data():
             "username": "addidas_puma",
             "password": pbkdf2_sha256.hash("123456"),
             "role": "staff",
-            "staff_id": "POL/2024/004", 
+            "staff_id": "POL/2024/004", # Note: Duplicated Staff ID in prompt, corrected for uniqueness
             "profile": {
                 "name": "Addidas Puma",
                 "date_of_birth": "1999-09-04",
-                "gender": "Female", # Corrected from Male
-                "grade_level": "Manager", # This user can act as HR Manager approver
+                "gender": "Male",
+                "grade_level": "Manager",
                 "department": "HR",
-                "education_background": "MSc. Human Resources",
-                "professional_experience": "7 years in HR operations",
-                "address": "202 HR Lane, Kano",
-                "phone_number": "+2348056789012",
+                "education_background": "",
+                "professional_experience": "",
+                "address": "",
+                "phone_number": "",
                 "email_address": "addidas.puma@example.com",
                 "training_attended": [],
                 "work_anniversary": "2023-07-20"
@@ -209,17 +189,17 @@ def setup_initial_data():
             "username": "big_kola",
             "password": pbkdf2_sha256.hash("123456"),
             "role": "staff",
-            "staff_id": "POL/2024/005", 
+            "staff_id": "POL/2024/005", # Corrected for uniqueness
             "profile": {
                 "name": "Big Kola",
                 "date_of_birth": "2001-06-13",
                 "gender": "Female",
-                "grade_level": "Officer",
-                "department": "Operations", # Assuming 'CV' was a typo for a department, changed to Operations
-                "education_background": "BEng. Civil Engineering",
-                "professional_experience": "3 years in project management",
-                "address": "303 Ops Drive, Ibadan",
-                "phone_number": "+2348067890123",
+                "grade_level": "Manager",
+                "department": "CV", # Assuming 'CV' is a department name
+                "education_background": "",
+                "professional_experience": "",
+                "address": "",
+                "phone_number": "",
                 "email_address": "big.kola@example.com",
                 "training_attended": [],
                 "work_anniversary": "2022-04-05"
@@ -229,17 +209,17 @@ def setup_initial_data():
             "username": "king_queen",
             "password": pbkdf2_sha256.hash("123456"),
             "role": "staff",
-            "staff_id": "POL/2024/006", 
+            "staff_id": "POL/2024/006", # Corrected for uniqueness
             "profile": {
                 "name": "King Queen",
                 "date_of_birth": "2002-06-16",
                 "gender": "Female",
                 "grade_level": "Officer",
-                "department": "IT", # Changed from Administration to IT for variety
-                "education_background": "B.Sc. Computer Science",
-                "professional_experience": "2 years in IT support",
-                "address": "404 Tech Road, Enugu",
-                "phone_number": "+2348078901234",
+                "department": "Administration",
+                "education_background": "",
+                "professional_experience": "",
+                "address": "",
+                "phone_number": "",
                 "email_address": "king.queen@example.com",
                 "training_attended": [],
                 "work_anniversary": "2023-11-01"
@@ -458,32 +438,20 @@ def display_dashboard():
         st.markdown("---")
         st.subheader("Your Pending Requests")
     # 🔔 Notify if current user is an approver on any pending requests
-    current_user_profile = st.session_state.current_user.get('profile', {})
-    current_user_department = current_user_profile.get('department')
-    current_user_grade = current_user_profile.get('grade_level')
-    
-    pending_approver_tasks_count = 0
-    
-    for req in st.session_state.opex_capex_requests:
-        # Determine the current approver role for this request
-        current_stage_index = req.get('current_approval_stage', 0)
-        if current_stage_index < len(APPROVAL_CHAIN):
-            expected_approver_stage = APPROVAL_CHAIN[current_stage_index]
-            
-            # Check if the current user matches the expected approver for this stage
-            is_current_approver = (
-                current_user_department == expected_approver_stage['department'] and
-                current_user_grade == expected_approver_stage['grade_level'] and
-                req.get('final_status') == "Pending" # Ensure overall request is still pending
-            )
-            if is_current_approver:
-                 # Additional check to see if this specific stage is pending
-                stage_status_key = f"status_{expected_approver_stage['role_name'].lower().replace(' ', '_')}"
-                if req.get(stage_status_key) == "Pending":
-                    pending_approver_tasks_count += 1
+    approver_name = st.session_state.current_user.get('profile', {}).get('name')
+    pending_approver_tasks = []
 
-    if pending_approver_tasks_count > 0:
-        st.warning(f"🔔 You have {pending_approver_tasks_count} OPEX/CAPEX requisition(s) awaiting your approval.")
+    for req in st.session_state.opex_capex_requests:
+        if (
+            (req.get('admin_manager_approver') == approver_name and req.get('status_admin_manager') == "Pending") or
+            (req.get('hr_manager_approver') == approver_name and req.get('status_hr_manager') == "Pending") or
+            (req.get('finance_manager_approver') == approver_name and req.get('status_finance_manager') == "Pending") or
+            (req.get('md_approver') == approver_name and req.get('status_md') == "Pending")
+        ):
+            pending_approver_tasks.append(req)
+
+    if pending_approver_tasks:
+        st.warning(f"🔔 You have {len(pending_approver_tasks)} OPEX/CAPEX requisition(s) awaiting your approval.")
 
         
         user_pending_leave = [
@@ -499,29 +467,12 @@ def display_dashboard():
             st.info(f"You have {len(user_pending_leave)} pending leave requests.")
         if user_pending_opex_capex:
             st.info(f"You have {len(user_pending_opex_capex)} pending OPEX/CAPEX requests.")
-        if not user_pending_leave and not user_pending_opex_capex and pending_approver_tasks_count == 0:
+        if not user_pending_leave and not user_pending_opex_capex:
             st.info("You have no pending requests.")
 
 
     else:
-        st.info("You have no pending requests.") # Changed from warning to info when no pending tasks
-        # If no pending tasks for approver, still show user's own requests
-        user_pending_leave = [
-            req for req in st.session_state.leave_requests 
-            if req.get('staff_id') == current_user_profile.get('staff_id') and req.get('status') == 'Pending'
-        ]
-        user_pending_opex_capex = [
-            req for req in st.session_state.opex_capex_requests 
-            if req.get('requester_staff_id') == current_user_profile.get('staff_id') and req.get('final_status') == 'Pending'
-        ]
-
-        if user_pending_leave:
-            st.info(f"You have {len(user_pending_leave)} pending leave requests.")
-        if user_pending_opex_capex:
-            st.info(f"You have {len(user_pending_opex_capex)} pending OPEX/CAPEX requests.")
-        if not user_pending_leave and not user_pending_opex_capex:
-            st.info("You have no pending requests (either as requester or approver).")
-
+        st.warning("User not logged in.")
 
 # --- My Profile Page ---
 def display_my_profile():
@@ -555,7 +506,7 @@ def display_my_profile():
                 dob_value = date.today()
         else:
             dob_value = date.today() # Default if no DOB exists
-            
+        
         current_user_profile['date_of_birth'] = st.date_input("Date of Birth", value=dob_value, key="profile_dob")
         current_user_profile['gender'] = st.selectbox("Gender", ["Male", "Female", "Other"], index=["Male", "Female", "Other"].index(current_user_profile.get("gender", "Male")), key="profile_gender")
         current_user_profile['grade_level'] = st.text_input("Grade Level", value=current_user_profile.get("grade_level", ""), key="profile_grade")
@@ -682,637 +633,1172 @@ def leave_request_form():
                     "reason": reason,
                     "document_path": doc_path,
                     "submission_date": str(datetime.now().date()),
-                    "status": "Pending" # Initial status for leave
+                    "status": "Pending" # Initial status
                 }
                 st.session_state.leave_requests.append(new_request)
                 save_data(st.session_state.leave_requests, LEAVE_REQUESTS_FILE)
-                st.success("Leave request submitted successfully!") # Completed this line
+                st.success("Leave request submitted successfully! It is now pending approval.")
                 st.rerun()
-    
-    st.markdown("---")
-    st.subheader("Your Leave History")
-    user_leave_history = [
-        req for req in st.session_state.leave_requests
-        if req.get('staff_id') == current_user_profile.get('staff_id')
-    ]
-    if user_leave_history:
-        df_leave = pd.DataFrame(user_leave_history)
-        df_leave_display = df_leave[['submission_date', 'leave_type', 'start_date', 'end_date', 'num_days', 'status', 'reason']]
-        st.dataframe(df_leave_display, use_container_width=True, hide_index=True)
+
+# --- View Leave Applications (Admin/Manager View) ---
+def view_leave_applications():
+    st.title("📋 View Leave Applications")
+
+    # Filter for logged-in user if not admin
+    if st.session_state.current_user['role'] == 'admin':
+        st.subheader("All Leave Requests")
+        display_requests_raw = st.session_state.leave_requests
     else:
-        st.info("You have not submitted any leave requests yet.")
-
-
-# --- Performance Goal Setting (Placeholder) ---
-def performance_goal_setting():
-    st.title("📈 Performance Goal Setting")
-    st.write("This section will allow staff to set and track their performance goals.")
-    st.info("Feature under development.")
-
-# --- Self-Appraisal (Placeholder) ---
-def self_appraisal():
-    st.title("✍️ Self-Appraisal")
-    st.write("This section will enable staff to submit their self-appraisals.")
-    st.info("Feature under development.")
-
-# --- HR Policies (Placeholder) ---
-def hr_policies():
-    st.title("📄 HR Policies")
-    st.write("Browse company HR policies.")
-    
-    policies = st.session_state.hr_policies
-    
-    if policies:
-        selected_policy_title = st.selectbox("Select a Policy", options=list(policies.keys()))
+        st.subheader("Your Leave Requests")
+        current_staff_id = st.session_state.current_user['profile'].get('staff_id')
+        display_requests_raw = [req for req in st.session_state.leave_requests if req.get('staff_id') == current_staff_id]
         
-        if selected_policy_title:
-            st.subheader(selected_policy_title)
-            st.write(policies[selected_policy_title])
-    else:
-        st.info("No HR policies available yet.")
+    if not display_requests_raw:
+        st.info("No leave applications to display.")
+        return
 
-# --- My Payslips (Placeholder) ---
-def my_payslips():
-    st.title("💰 My Payslips")
-    st.write("View and download your payslips here.")
-    st.info("Feature under development.")
+    # Define expected columns and their default values
+    expected_cols = {
+        "request_id": None, "staff_id": "N/A", "staff_name": "N/A", "leave_type": "N/A", 
+        "start_date": None, "end_date": None, "num_days": 0, "reason": "N/A", 
+        "document_path": None, "submission_date": None, "status": "N/A"
+    }
     
-    current_staff_id = st.session_state.current_user.get('profile', {}).get('staff_id')
+    # Create a list of dictionaries with all expected keys
+    cleaned_requests = []
+    for req in display_requests_raw:
+        cleaned_req = {key: req.get(key, default_val) for key, default_val in expected_cols.items()}
+        cleaned_requests.append(cleaned_req)
+
+    df_leave_requests = pd.DataFrame(cleaned_requests)
     
-    # Filter payroll data for the current user
-    user_payslips = [
-        payslip for payslip in st.session_state.payroll_data
-        if payslip.get('Staff ID') == current_staff_id # Assuming 'Staff ID' is the column name
+    # Convert dates to datetime objects for processing, then back to date for display
+    df_leave_requests['start_date'] = pd.to_datetime(df_leave_requests['start_date'], errors='coerce').dt.date
+    df_leave_requests['end_date'] = pd.to_datetime(df_leave_requests['end_date'], errors='coerce').dt.date
+    df_leave_requests['submission_date'] = pd.to_datetime(df_leave_requests['submission_date'], errors='coerce').dt.date
+
+    # Sort and display
+    df_leave_requests_sorted = df_leave_requests.sort_values(by="submission_date", ascending=False)
+    
+    display_cols_for_df = [
+        "request_id", "staff_name", "leave_type", "start_date", "end_date", 
+        "num_days", "status", "submission_date", "reason"
     ]
+    # Filter display columns to only include those that actually exist in the DataFrame
+    final_display_cols = [col for col in display_cols_for_df if col in df_leave_requests_sorted.columns]
 
-    if user_payslips:
-        df_payslips = pd.DataFrame(user_payslips)
-        st.dataframe(df_payslips, use_container_width=True, hide_index=True)
-        # TODO: Add PDF generation/download for individual payslips later
-    else:
-        st.info("No payslips available for your Staff ID yet.")
+    st.dataframe(df_leave_requests_sorted[final_display_cols], use_container_width=True, hide_index=True)
 
+    if st.session_state.current_user['role'] == 'admin':
+        st.markdown("---")
+        st.subheader("Approve/Reject Leave Requests")
+        
+        pending_requests = [req for req in cleaned_requests if req['status'] == 'Pending'] # Use cleaned requests for safety
 
-# --- OPEX/CAPEX Requisition Form (Requester Side) ---
+        if not pending_requests:
+            st.info("No pending leave requests to approve/reject.")
+            return
+
+        request_options = [""] + [f"ID: {req['request_id']} - {req['staff_name']} ({req['leave_type']} {req['start_date']} to {req['end_date']})" for req in pending_requests if req.get('request_id') is not None]
+        selected_request_info = st.selectbox("Select Leave Request to Review", options=request_options)
+
+        if selected_request_info:
+            request_id = int(selected_request_info.split(" - ")[0].replace("ID: ", ""))
+            selected_request = next(req for req in st.session_state.leave_requests if req.get('request_id') == request_id) # Use original for updating
+
+            st.write(f"**Staff Name:** {selected_request.get('staff_name', 'N/A')}")
+            st.write(f"**Leave Type:** {selected_request.get('leave_type', 'N/A')}")
+            st.write(f"**Dates:** {selected_request.get('start_date', 'N/A')} to {selected_request.get('end_date', 'N/A')} ({selected_request.get('num_days', 'N/A')} days)")
+            st.write(f"**Reason:** {selected_request.get('reason', 'N/A')}")
+            if selected_request.get('document_path') and os.path.exists(selected_request['document_path']):
+                with open(selected_request['document_path'], "rb") as file:
+                    btn = st.download_button(
+                        label="Download Supporting Document",
+                        data=file.read(),
+                        file_name=os.path.basename(selected_request['document_path']),
+                        mime="application/octet-stream"
+                    )
+            else:
+                st.info("No supporting document uploaded.")
+
+            col_approve, col_reject = st.columns(2)
+            with col_approve:
+                if st.button("Approve Request", key=f"approve_{request_id}"):
+                    for i, req in enumerate(st.session_state.leave_requests):
+                        if req.get('request_id') == request_id:
+                            st.session_state.leave_requests[i]['status'] = 'Approved'
+                            break
+                    save_data(st.session_state.leave_requests, LEAVE_REQUESTS_FILE)
+                    st.success(f"Leave request {request_id} approved.")
+                    st.rerun()
+            with col_reject:
+                if st.button("Reject Request", key=f"reject_{request_id}"):
+                    for i, req in enumerate(st.session_state.leave_requests):
+                        if req.get('request_id') == request_id:
+                            st.session_state.leave_requests[i]['status'] = 'Rejected'
+                            break
+                    save_data(st.session_state.leave_requests, LEAVE_REQUESTS_FILE)
+                    st.warning(f"Leave request {request_id} rejected.")
+                    st.rerun()
+
+# --- OPEX/CAPEX Form (Existing, will enhance approvals) ---
 def opex_capex_form():
     st.title("💲 OPEX/CAPEX Requisition")
     st.write("Submit your operational or capital expenditure requisition.")
 
     current_user_profile = st.session_state.current_user.get('profile', {})
-    
+
     with st.form("opex_capex_requisition_form"):
         st.subheader(f"Requisition by {current_user_profile.get('name', 'N/A')}")
         
         request_type = st.selectbox("Request Type", ["OPEX (Operational Expenditure)", "CAPEX (Capital Expenditure)"])
         item_description = st.text_area("Item/Service Description", height=100)
         quantity = st.number_input("Quantity", min_value=1, value=1)
-        unit_price = st.number_input("Unit Price (NGN)", min_value=0.01, value=1000.00, format="%.2f")
+        unit_price = st.number_input("Unit Price (₦)", min_value=0.0, value=0.0, format="%.2f")
         total_amount = quantity * unit_price
-        st.info(f"Calculated Total Amount: NGN {total_amount:,.2f}")
-        
-        justification = st.text_area("Justification/Purpose", height=150)
-        
-        # New: Vendor Details
-        st.subheader("Vendor Details")
-        beneficiary_options = list(st.session_state.beneficiaries.keys())
-        selected_beneficiary_name = st.selectbox("Select Existing Beneficiary or Manually Enter", beneficiary_options)
+        st.write(f"**Total Amount: ₦{total_amount:,.2f}**")
 
-        vendor_name = ""
-        vendor_account_name = ""
-        vendor_account_no = ""
-        vendor_bank = ""
-
-        if selected_beneficiary_name == "Other (Manually Enter Details)":
-            vendor_name = st.text_input("New Vendor Name")
-            vendor_account_name = st.text_input("Vendor Account Name")
-            vendor_account_no = st.text_input("Vendor Account Number")
-            vendor_bank = st.text_input("Vendor Bank Name")
-        else:
-            selected_details = st.session_state.beneficiaries.get(selected_beneficiary_name, {})
-            vendor_name = selected_beneficiary_name
-            vendor_account_name = st.text_input("Vendor Account Name", value=selected_details.get("Account Name", ""), disabled=True)
-            vendor_account_no = st.text_input("Vendor Account Number", value=selected_details.get("Account No", ""), disabled=True)
-            vendor_bank = st.text_input("Vendor Bank Name", value=selected_details.get("Bank", ""), disabled=True)
-
-        supporting_document = st.file_uploader("Upload Supporting Document (e.g., Invoice, Quote)", type=["pdf", "jpg", "jpeg", "png"])
+        justification = st.text_area("Justification / Business Case", height=150)
         
+        # --- Approvers Selection (New) ---
+        st.subheader("Select Approvers")
+        # Get all users who are "managers" in relevant departments or have 'admin' role
+        # For simplicity, let's allow selection from all users, but ideally filtered by role/department
+        # Ensure 'name' exists for user profiles
+        all_staff_names = sorted([user.get('profile', {}).get('name') for user in st.session_state.users if user.get('profile', {}).get('name') is not None])
+        approver_options = [""] + all_staff_names
+        
+        admin_manager_approver = st.selectbox("Admin Manager (Required)", options=approver_options, key="admin_manager_approver")
+        hr_manager_approver = st.selectbox("HR Manager (Required)", options=approver_options, key="hr_manager_approver")
+        finance_manager_approver = st.selectbox("Finance Manager (Required)", options=approver_options, key="finance_manager_approver")
+        md_approver = st.selectbox("Managing Director (Required)", options=approver_options, key="md_approver")
+
+        # Basic validation for approvers
+        required_approvers_selected = all([admin_manager_approver, hr_manager_approver, finance_manager_approver, md_approver])
+
         submitted = st.form_submit_button("Submit Requisition")
 
         if submitted:
-            if not item_description or not justification:
-                st.error("Item description and justification are required.")
-            elif selected_beneficiary_name == "Other (Manually Enter Details)" and (not vendor_name or not vendor_account_name or not vendor_account_no or not vendor_bank):
-                st.error("Please enter all manual vendor details, or select an existing beneficiary.")
+            if not required_approvers_selected:
+                st.error("Please select all required approvers.")
+            elif not item_description or total_amount <= 0:
+                st.error("Please provide item description and a valid amount.")
             else:
-                doc_path = save_uploaded_file(supporting_document, "opex_capex_documents")
-                
-                # Initialize approval statuses for each stage
-                approval_stages_data = {}
-                for stage in APPROVAL_CHAIN:
-                    key_prefix = stage['role_name'].lower().replace(' ', '_')
-                    approval_stages_data[f"status_{key_prefix}"] = "Pending"
-                    approval_stages_data[f"{key_prefix}_approved_by"] = None
-                    approval_stages_data[f"{key_prefix}_approval_date"] = None
-                    approval_stages_data[f"{key_prefix}_comments"] = None
-
                 new_request = {
-                    "request_id": len(st.session_state.opex_capex_requests) + 1,
+                    "req_id": len(st.session_state.opex_capex_requests) + 1,
                     "requester_staff_id": current_user_profile.get('staff_id', 'N/A'),
                     "requester_name": current_user_profile.get('name', 'N/A'),
-                    "requester_department": current_user_profile.get('department', 'N/A'),
                     "request_type": request_type,
                     "item_description": item_description,
                     "quantity": quantity,
                     "unit_price": unit_price,
                     "total_amount": total_amount,
                     "justification": justification,
-                    "vendor_name": vendor_name,
-                    "vendor_account_name": vendor_account_name,
-                    "vendor_account_no": vendor_account_no,
-                    "vendor_bank": vendor_bank,
-                    "document_path": doc_path,
                     "submission_date": str(datetime.now().date()),
-                    "final_status": "Pending", # Overall status
-                    "current_approval_stage": 0, # Index of the current approver in APPROVAL_CHAIN
-                    "approval_history": [], # To store comments/decisions from each stage
-                    **approval_stages_data # Unpack the dynamically created approval status fields
+                    "admin_manager_approver": admin_manager_approver, # Store selected approver name
+                    "hr_manager_approver": hr_manager_approver,
+                    "finance_manager_approver": finance_manager_approver,
+                    "md_approver": md_approver,
+                    "status_admin_manager": "Pending", # Initial status for each approver
+                    "status_hr_manager": "Pending",
+                    "status_finance_manager": "Pending",
+                    "status_md": "Pending",
+                    "final_status": "Pending" # Overall final status
                 }
                 st.session_state.opex_capex_requests.append(new_request)
                 save_data(st.session_state.opex_capex_requests, OPEX_CAPEX_REQUESTS_FILE)
-                st.success("OPEX/CAPEX requisition submitted successfully!")
+                st.success("OPEX/CAPEX requisition submitted successfully! It is now pending approval.")
                 st.rerun()
 
-    st.markdown("---")
-    st.subheader("Your OPEX/CAPEX Requisition History")
-    user_opex_capex_history = [
-        req for req in st.session_state.opex_capex_requests
-        if req.get('requester_staff_id') == current_user_profile.get('staff_id')
-    ]
-    if user_opex_capex_history:
-        df_opex_capex = pd.DataFrame(user_opex_capex_history)
-        # Select relevant columns for display
-        display_cols = [
-            'submission_date', 'request_type', 'item_description', 'total_amount', 
-            'final_status', 'current_approval_stage'
-        ]
-        # Add individual stage statuses if they exist and are relevant
-        for stage in APPROVAL_CHAIN:
-            display_cols.append(f"status_{stage['role_name'].lower().replace(' ', '_')}")
-            
-        st.dataframe(df_opex_capex[display_cols], use_container_width=True, hide_index=True)
-    else:
-        st.info("You have not submitted any OPEX/CAPEX requisitions yet.")
+# --- Manage OPEX/CAPEX Approvals (New Admin/Manager Functionality) ---
+def manage_opex_capex_approvals():
+    st.title("✅ Manage OPEX/CAPEX Approvals")
 
+    current_user = st.session_state.current_user
+    current_user_name = current_user.get('profile', {}).get('name')
+    current_user_department = current_user.get('profile', {}).get('department')
 
-# --- Admin Functions (New/Modified) ---
+    # Determine which requests the current user can approve
+    requests_for_approval_list = [] # Use a list to collect and then deduplicate
+    approver_role_display = "Reviewer" # Default display role
 
-# Admin: Manage Users (Placeholder)
-def admin_manage_users():
-    st.title("👥 Admin: Manage Users")
-    st.write("This section allows administrators to view, add, edit, and deactivate user accounts.")
-    
-    # Display current users
-    st.subheader("Current Users")
-    if st.session_state.users:
-        df_users = pd.DataFrame([
-            {
-                "Username": user['username'],
-                "Name": user['profile']['name'],
-                "Staff ID": user['staff_id'],
-                "Role": user['role'],
-                "Department": user['profile']['department'],
-                "Grade Level": user['profile']['grade_level'],
-                "Email": user['profile']['email_address']
-            } for user in st.session_state.users
+    # Admin can approve all
+    if current_user['role'] == 'admin':
+        requests_for_approval_list.extend([
+            req for req in st.session_state.opex_capex_requests if req.get('final_status') == 'Pending'
         ])
-        st.dataframe(df_users, use_container_width=True, hide_index=True)
+        approver_role_display = "Administrator"
     else:
-        st.info("No users found.")
+        # Check specific department manager roles
+        if current_user_department == 'Admin':
+            requests_for_approval_list.extend([
+                req for req in st.session_state.opex_capex_requests
+                if req.get('admin_manager_approver') == current_user_name and req.get('status_admin_manager') == 'Pending'
+            ])
+            approver_role_display = "Admin Manager"
+        if current_user_department == 'HR':
+            requests_for_approval_list.extend([
+                req for req in st.session_state.opex_capex_requests
+                if req.get('hr_manager_approver') == current_user_name and req.get('status_hr_manager') == 'Pending'
+            ])
+            if approver_role_display == "Reviewer": approver_role_display = "HR Manager"
+        if current_user_department == 'Finance':
+            requests_for_approval_list.extend([
+                req for req in st.session_state.opex_capex_requests
+                if req.get('finance_manager_approver') == current_user_name and req.get('status_finance_manager') == 'Pending'
+            ])
+            if approver_role_display == "Reviewer": approver_role_display = "Finance Manager"
+        # Assuming MD/Executive role is for MD approvals
+        if current_user_department in ['Executive', 'MD']: 
+            requests_for_approval_list.extend([
+                req for req in st.session_state.opex_capex_requests
+                if req.get('md_approver') == current_user_name and req.get('status_md') == 'Pending'
+            ])
+            if approver_role_display == "Reviewer": approver_role_display = "Managing Director"
+
+    # Deduplicate requests if a user falls into multiple approval categories or is admin
+    unique_requests = {req.get('req_id'): req for req in requests_for_approval_list if req.get('req_id') is not None}.values()
     
+    if not unique_requests:
+        st.info("No OPEX/CAPEX requests pending your approval.")
+        return
+
+    df_requests = pd.DataFrame(list(unique_requests))
+
+    st.subheader(f"Requests Pending Your Approval (As {approver_role_display})")
+    
+    # Define expected columns for robust DataFrame creation
+    expected_cols = {
+        "req_id": None, "requester_name": "N/A", "request_type": "N/A", 
+        "item_description": "N/A", "total_amount": 0.0, "submission_date": None, 
+        "status_admin_manager": "N/A", "status_hr_manager": "N/A",
+        "status_finance_manager": "N/A", "status_md": "N/A", "final_status": "N/A"
+    }
+
+    # Clean the DataFrame based on expected columns
+    cleaned_df_requests = []
+    for index, row in df_requests.iterrows():
+        cleaned_row = {col: row.get(col, default_val) for col, default_val in expected_cols.items()}
+        cleaned_df_requests.append(cleaned_row)
+    df_requests_cleaned = pd.DataFrame(cleaned_df_requests)
+
+
+    # Define columns for display
+    display_cols = [
+        "req_id", "requester_name", "request_type", "item_description", "total_amount",
+        "submission_date", "status_admin_manager", "status_hr_manager",
+        "status_finance_manager", "status_md", "final_status"
+    ]
+    
+    # Filter only columns present in the DataFrame to avoid KeyError on display
+    current_display_cols = [col for col in display_cols if col in df_requests_cleaned.columns]
+
+    df_requests_cleaned['submission_date'] = pd.to_datetime(df_requests_cleaned['submission_date'], errors='coerce').dt.date
+    st.dataframe(df_requests_cleaned[current_display_cols].sort_values(by="submission_date", ascending=False), use_container_width=True, hide_index=True)
+
     st.markdown("---")
-    st.subheader("Add New User")
-    with st.form("add_user_form"):
-        new_username = st.text_input("New User ID (e.g., email or unique identifier)", key="new_user_username")
-        new_password = st.text_input("Password", type="password", key="new_user_password")
-        new_name = st.text_input("Full Name", key="new_user_name")
-        new_staff_id = st.text_input("Staff ID", key="new_user_staff_id")
-        new_role = st.selectbox("Role", ["staff", "admin"], key="new_user_role")
-        new_department_options = ["Admin", "HR", "Finance", "IT", "Marketing", "Operations", "Sales", "Executive", "Administration", "CV", "Other", "Unassigned"]
-        new_department = st.selectbox("Department", options=new_department_options, key="new_user_department")
-        new_grade_level = st.text_input("Grade Level", key="new_user_grade_level")
-        new_email = st.text_input("Email Address", key="new_user_email")
+    st.subheader("Review Request")
 
-        add_user_button = st.form_submit_button("Add User")
+    request_options = [""] + [f"ID: {req['req_id']} - {req['requester_name']} ({req['item_description']})" for req in unique_requests if req.get('req_id') is not None]
+    selected_request_info = st.selectbox("Select Request to Review", options=request_options)
 
-        if add_user_button:
-            if not new_username or not new_password or not new_staff_id:
-                st.error("User ID, Password, and Staff ID are required.")
-            elif any(user['username'] == new_username for user in st.session_state.users):
-                st.error("User ID already exists. Please choose a different one.")
-            elif any(user['staff_id'] == new_staff_id for user in st.session_state.users):
-                st.error("Staff ID already exists. Please use a unique Staff ID.")
-            else:
-                new_user_obj = {
-                    "username": new_username,
-                    "password": pbkdf2_sha256.hash(new_password),
-                    "role": new_role,
-                    "staff_id": new_staff_id,
-                    "profile": {
-                        "name": new_name,
-                        "date_of_birth": "", # Can be updated by user later
-                        "gender": "Other", # Can be updated by user later
-                        "grade_level": new_grade_level,
-                        "department": new_department,
-                        "education_background": "",
-                        "professional_experience": "",
-                        "address": "",
-                        "phone_number": "",
-                        "email_address": new_email,
-                        "training_attended": [],
-                        "work_anniversary": str(date.today())
-                    }
-                }
-                st.session_state.users.append(new_user_obj)
-                save_data(st.session_state.users, USERS_FILE)
-                st.success(f"User '{new_username}' added successfully!")
-                st.rerun()
+    if selected_request_info:
+        req_id = int(selected_request_info.split(" - ")[0].replace("ID: ", ""))
+        selected_req = next(req for req in st.session_state.opex_capex_requests if req.get('req_id') == req_id)
 
-    st.info("Additional features like editing and deactivating users can be added here.")
+        st.write(f"**Requisition ID:** {selected_req.get('req_id', 'N/A')}")
+        st.write(f"**Requester:** {selected_req.get('requester_name', 'N/A')}")
+        st.write(f"**Type:** {selected_req.get('request_type', 'N/A')}")
+        st.write(f"**Description:** {selected_req.get('item_description', 'N/A')}")
+        st.write(f"**Quantity:** {selected_req.get('quantity', 'N/A')}")
+        st.write(f"**Unit Price:** ₦{selected_req.get('unit_price', 0):,.2f}")
+        st.write(f"**Total Amount:** ₦{selected_req.get('total_amount', 0):,.2f}")
+        st.write(f"**Justification:** {selected_req.get('justification', 'N/A')}")
+        st.write(f"**Submission Date:** {selected_req.get('submission_date', 'N/A')}")
+        st.write("---")
+        st.write("### Current Approval Status:")
+        st.write(f"- Admin Manager ({selected_req.get('admin_manager_approver', 'N/A')}): {selected_req.get('status_admin_manager', 'N/A')}")
+        st.write(f"- HR Manager ({selected_req.get('hr_manager_approver', 'N/A')}): {selected_req.get('status_hr_manager', 'N/A')}")
+        st.write(f"- Finance Manager ({selected_req.get('finance_manager_approver', 'N/A')}): {selected_req.get('status_finance_manager', 'N/A')}")
+        st.write(f"- MD ({selected_req.get('md_approver', 'N/A')}): {selected_req.get('status_md', 'N/A')}")
+        st.write(f"**Overall Final Status:** {selected_req.get('final_status', 'N/A')}")
 
 
-# Admin: Upload Payroll (Placeholder)
-def admin_upload_payroll():
-    st.title("📤 Admin: Upload Payroll")
-    st.write("This section allows administrators to upload payroll data, typically from a CSV or Excel file.")
+        # Approval Form for the current user's role
+        with st.form(f"approve_opex_capex_form_{req_id}"):
+            new_status = st.radio(f"Action for this Request (as {approver_role_display})", ["Approve", "Reject"], key=f"status_action_{req_id}")
+            comment = st.text_area("Your Comment (Optional)", key=f"comment_{req_id}")
+
+            col_submit_approval, col_cancel_approval = st.columns(2)
+            with col_submit_approval:
+                if st.form_submit_button("Submit Action", key=f"submit_action_{req_id}"):
+                    for i, req_item in enumerate(st.session_state.opex_capex_requests):
+                        if req_item.get('req_id') == req_id:
+                            # Update status based on current user's role
+                            # Admin role can override any status if needed, but here we'll stick to specific roles
+                            # For simplicity, if admin is also the approver, they approve their specific step
+                            if current_user_name == req_item.get('admin_manager_approver'):
+                                st.session_state.opex_capex_requests[i]['status_admin_manager'] = new_status
+                            if current_user_name == req_item.get('hr_manager_approver'):
+                                st.session_state.opex_capex_requests[i]['status_hr_manager'] = new_status
+                            if current_user_name == req_item.get('finance_manager_approver'):
+                                st.session_state.opex_capex_requests[i]['status_finance_manager'] = new_status
+                            if current_user_name == req_item.get('md_approver'):
+                                st.session_state.opex_capex_requests[i]['status_md'] = new_status
+                            
+                            # Update final status - only if all are approved
+                            current_req_statuses = st.session_state.opex_capex_requests[i]
+                            all_approved = (
+                                current_req_statuses.get('status_admin_manager') == 'Approve' and
+                                current_req_statuses.get('status_hr_manager') == 'Approve' and
+                                current_req_statuses.get('status_finance_manager') == 'Approve' and
+                                current_req_statuses.get('status_md') == 'Approve'
+                            )
+                            any_rejected = (
+                                current_req_statuses.get('status_admin_manager') == 'Reject' or
+                                current_req_statuses.get('status_hr_manager') == 'Reject' or
+                                current_req_statuses.get('status_finance_manager') == 'Reject' or
+                                current_req_statuses.get('status_md') == 'Reject'
+                            )
+
+                            if all_approved:
+                                st.session_state.opex_capex_requests[i]['final_status'] = 'Approved'
+                                st.success(f"Requisition {req_id} has been fully approved!")
+                            elif any_rejected:
+                                st.session_state.opex_capex_requests[i]['final_status'] = 'Rejected'
+                                st.error(f"Requisition {req_id} has been rejected.")
+                            else:
+                                st.session_state.opex_capex_requests[i]['final_status'] = 'Pending' # Still pending other approvals
+                                st.info(f"Action recorded for Requisition {req_id}. Still pending other approvals.")
+
+                            break # Found and updated the request
+
+                    save_data(st.session_state.opex_capex_requests, OPEX_CAPEX_REQUESTS_FILE)
+                    st.rerun() # Rerun to refresh the list of pending requests
+
+            with col_cancel_approval:
+                if st.form_submit_button("Cancel", key=f"cancel_action_{req_id}"):
+                    st.info("Action cancelled.")
+                    st.rerun()
+
+# --- View OPEX/CAPEX Requests (User's historical view) ---
+def view_opex_capex_requests():
+    st.title("📄 View OPEX/CAPEX Requests")
+
+    current_staff_id = st.session_state.current_user['profile'].get('staff_id')
     
-    uploaded_file = st.file_uploader("Upload Payroll File (CSV, Excel)", type=["csv", "xlsx"])
+    # Filter by current user
+    user_requests_raw = [req for req in st.session_state.opex_capex_requests if req.get('requester_staff_id') == current_staff_id]
+
+    if not user_requests_raw:
+        st.info("You have no OPEX/CAPEX requisitions to display.")
+        return
+
+    # Define expected columns for robust DataFrame creation
+    expected_cols = {
+        "req_id": None, "requester_staff_id": "N/A", "requester_name": "N/A", "request_type": "N/A", 
+        "item_description": "N/A", "quantity": 0, "unit_price": 0.0, "total_amount": 0.0, 
+        "justification": "N/A", "submission_date": None, "admin_manager_approver": "N/A", 
+        "hr_manager_approver": "N/A", "finance_manager_approver": "N/A", "md_approver": "N/A",
+        "status_admin_manager": "N/A", "status_hr_manager": "N/A", "status_finance_manager": "N/A", 
+        "status_md": "N/A", "final_status": "N/A"
+    }
     
-    if uploaded_file:
-        try:
-            if uploaded_file.name.endswith('.csv'):
-                df_payroll = pd.read_csv(uploaded_file)
-            else: # Assume xlsx
-                df_payroll = pd.read_excel(uploaded_file)
-            
-            st.subheader("Preview of Uploaded Data")
-            st.dataframe(df_payroll)
-            
-            if st.button("Confirm and Save Payroll Data"):
-                # Convert DataFrame to list of dictionaries for JSON storage
-                st.session_state.payroll_data = df_payroll.to_dict(orient='records')
-                save_data(st.session_state.payroll_data, PAYROLL_FILE)
-                st.success("Payroll data uploaded and saved successfully!")
-                st.rerun()
+    # Create a list of dictionaries with all expected keys
+    cleaned_user_requests = []
+    for req in user_requests_raw:
+        cleaned_req = {key: req.get(key, default_val) for key, default_val in expected_cols.items()}
+        cleaned_user_requests.append(cleaned_req)
 
-        except Exception as e:
-            st.error(f"Error processing file: {e}")
-            st.info("Please ensure the file is a valid CSV or Excel format.")
+    df_user_requests = pd.DataFrame(cleaned_user_requests)
     
-    st.subheader("Current Payroll Data Summary")
-    if st.session_state.payroll_data:
-        df_current_payroll = pd.DataFrame(st.session_state.payroll_data)
-        st.dataframe(df_current_payroll.head()) # Show first few rows
-        st.write(f"Total records: {len(df_current_payroll)}")
-    else:
-        st.info("No payroll data currently loaded.")
+    df_user_requests['submission_date'] = pd.to_datetime(df_user_requests['submission_date'], errors='coerce').dt.date
+    
+    # Select columns for display
+    display_cols = [
+        "req_id", "request_type", "item_description", "total_amount", 
+        "submission_date", "status_admin_manager", "status_hr_manager", 
+        "status_finance_manager", "status_md", "final_status"
+    ]
+    # Filter display columns to only include those that actually exist in the DataFrame
+    final_display_cols = [col for col in display_cols if col in df_user_requests.columns]
 
+    st.dataframe(df_user_requests[final_display_cols].sort_values(by="submission_date", ascending=False), use_container_width=True, hide_index=True)
 
-# Admin: Manage OPEX/CAPEX Approvals (Crucial for Requirement 1)
-def admin_manage_opex_capex_approvals():
-    st.title("✅ Admin: Manage OPEX/CAPEX Approvals")
-    st.write("Review and approve/reject pending OPEX/CAPEX requisitions.")
+# --- Performance Goal Setting (Existing) ---
+def performance_goal_setting():
+    st.title("📈 Performance Goal Setting")
+    st.write("Set and track your performance goals.")
 
     current_user_profile = st.session_state.current_user.get('profile', {})
-    current_user_department = current_user_profile.get('department')
-    current_user_grade = current_user_profile.get('grade_level')
+    
+    with st.form("goal_setting_form"):
+        st.subheader(f"Set a New Goal for {current_user_profile.get('name', 'N/A')}")
+        goal_title = st.text_input("Goal Title")
+        goal_description = st.text_area("Goal Description", height=100)
+        due_date = st.date_input("Due Date", value=datetime.now().date() + timedelta(days=90))
+        
+        submitted = st.form_submit_button("Set Goal")
 
-    st.subheader("Requisitions Awaiting Your Approval")
-    pending_for_current_approver = []
-
-    for req in st.session_state.opex_capex_requests:
-        current_stage_index = req.get('current_approval_stage', 0)
-        if req.get('final_status') == "Pending" and current_stage_index < len(APPROVAL_CHAIN):
-            expected_approver_stage = APPROVAL_CHAIN[current_stage_index]
-            
-            # Check if the current logged-in user is the approver for the current stage
-            is_current_approver = (
-                current_user_department == expected_approver_stage['department'] and
-                current_user_grade == expected_approver_stage['grade_level']
-            )
-            
-            # Check the specific status for this stage
-            stage_status_key = f"status_{expected_approver_stage['role_name'].lower().replace(' ', '_')}"
-            if is_current_approver and req.get(stage_status_key) == "Pending":
-                pending_for_current_approver.append(req)
-
-    if not pending_for_current_approver:
-        st.info("No OPEX/CAPEX requisitions awaiting your approval at this time.")
-    else:
-        st.warning(f"You have {len(pending_for_current_approver)} requisition(s) to review.")
-        for i, req in enumerate(pending_for_current_approver):
-            st.markdown(f"---")
-            st.subheader(f"Request ID: {req.get('request_id')} - {req.get('request_type')} by {req.get('requester_name')}")
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                st.write(f"**Requester Staff ID:** {req.get('requester_staff_id')}")
-                st.write(f"**Department:** {req.get('requester_department')}")
-                st.write(f"**Item:** {req.get('item_description')}")
-                st.write(f"**Quantity:** {req.get('quantity')}")
-                st.write(f"**Unit Price:** NGN {req.get('unit_price'):,.2f}")
-                st.write(f"**Total Amount:** NGN {req.get('total_amount'):,.2f}")
-                st.write(f"**Submission Date:** {req.get('submission_date')}")
-            with col2:
-                st.write(f"**Justification:** {req.get('justification')}")
-                st.write(f"**Vendor:** {req.get('vendor_name')} (Account: {req.get('vendor_account_name')}/{req.get('vendor_account_no')} - {req.get('vendor_bank')})")
-                if req.get('document_path'):
-                    st.download_button(
-                        label="Download Supporting Document",
-                        data=open(req['document_path'], "rb").read(),
-                        file_name=os.path.basename(req['document_path']),
-                        mime="application/octet-stream",
-                        key=f"download_doc_{req['request_id']}"
-                    )
-                else:
-                    st.info("No supporting document uploaded.")
-            
-            st.markdown("---")
-            st.write(f"**Current Approval Stage:** {APPROVAL_CHAIN[req['current_approval_stage']]['role_name']}")
-            
-            # Display approval history
-            if req.get('approval_history'):
-                st.markdown("#### Approval History:")
-                for entry in req['approval_history']:
-                    status_text = "Approved" if entry['status'] == "Approved" else "Rejected"
-                    st.markdown(f"- **{entry['approver_role']}** by **{entry['approver_name']}** on *{entry['date']}*: {status_text}. Comment: *{entry['comment'] if entry['comment'] else 'No comment.'}*")
+        if submitted:
+            if goal_title and goal_description:
+                new_goal = {
+                    "goal_id": len(st.session_state.performance_goals) + 1,
+                    "staff_id": current_user_profile.get('staff_id', 'N/A'),
+                    "staff_name": current_user_profile.get('name', 'N/A'),
+                    "title": goal_title,
+                    "description": goal_description,
+                    "due_date": str(due_date),
+                    "status": "Not Started", # Initial status
+                    "set_date": str(datetime.now().date())
+                }
+                st.session_state.performance_goals.append(new_goal)
+                save_data(st.session_state.performance_goals, PERFORMANCE_GOALS_FILE)
+                st.success("Performance goal set successfully!")
+                st.rerun()
             else:
-                st.info("No approval history yet.")
-
-            with st.form(f"approval_form_{req['request_id']}"):
-                approval_comment = st.text_area("Your Comment (Optional)", key=f"comment_{req['request_id']}")
-                col_btn1, col_btn2 = st.columns(2)
-                with col_btn1:
-                    approve_button = st.form_submit_button("Approve", help="Approve this requisition")
-                with col_btn2:
-                    reject_button = st.form_submit_button("Reject", help="Reject this requisition")
-
-                if approve_button or reject_button:
-                    # Update the specific stage status for the current approver
-                    current_approver_stage_name = APPROVAL_CHAIN[current_stage_index]['role_name']
-                    stage_status_key = f"status_{current_approver_stage_name.lower().replace(' ', '_')}"
-                    approver_name_key = f"{current_approver_stage_name.lower().replace(' ', '_')}_approved_by"
-                    approval_date_key = f"{current_approver_stage_name.lower().replace(' ', '_')}_approval_date"
-                    comments_key = f"{current_approver_stage_name.lower().replace(' ', '_')}_comments"
-
-                    req[approver_name_key] = current_user_profile.get('name')
-                    req[approval_date_key] = str(date.today())
-                    req[comments_key] = approval_comment
-
-                    history_entry = {
-                        "approver_role": current_approver_stage_name,
-                        "approver_name": current_user_profile.get('name'),
-                        "date": str(date.today()),
-                        "comment": approval_comment
-                    }
-
-                    if approve_button:
-                        req[stage_status_key] = "Approved"
-                        history_entry["status"] = "Approved"
-                        
-                        # Move to next stage or finalize
-                        if current_stage_index + 1 < len(APPROVAL_CHAIN):
-                            req['current_approval_stage'] += 1
-                            st.success(f"Requisition {req['request_id']} approved by {current_approver_stage_name}. Moving to next approval stage.")
-                        else:
-                            req['final_status'] = "Approved"
-                            req['current_approval_stage'] = -1 # Indicate final state
-                            st.success(f"Requisition {req['request_id']} fully approved!")
-                    elif reject_button:
-                        req[stage_status_key] = "Rejected"
-                        req['final_status'] = "Rejected"
-                        req['current_approval_stage'] = -1 # Indicate final state
-                        history_entry["status"] = "Rejected"
-                        st.error(f"Requisition {req['request_id']} rejected by {current_approver_stage_name}.")
-                    
-                    req['approval_history'].append(history_entry)
-                    save_data(st.session_state.opex_capex_requests, OPEX_CAPEX_REQUESTS_FILE)
-                    st.rerun() # Refresh the page to show updated status
+                st.error("Goal Title and Description cannot be empty.")
 
     st.markdown("---")
-    st.subheader("All OPEX/CAPEX Requisitions (for Admin/Overview)")
-    if st.session_state.opex_capex_requests:
-        df_all_opex_capex = pd.DataFrame(st.session_state.opex_capex_requests)
-        display_cols = [
-            'request_id', 'requester_name', 'submission_date', 'request_type', 
-            'total_amount', 'final_status', 
-            'current_approval_stage'
-        ]
-        # Add all individual stage statuses for full overview
-        for stage in APPROVAL_CHAIN:
-            display_cols.append(f"status_{stage['role_name'].lower().replace(' ', '_')}")
+    st.subheader("Your Performance Goals")
+    
+    user_goals_raw = [goal for goal in st.session_state.performance_goals if goal.get('staff_id') == current_user_profile.get('staff_id')]
 
-        st.dataframe(df_all_opex_capex[display_cols], use_container_width=True, hide_index=True)
+    if not user_goals_raw:
+        st.info("You have not set any performance goals yet.")
+        return
+
+    # Define expected columns for robust DataFrame creation
+    expected_cols = {
+        "goal_id": None, "staff_id": "N/A", "staff_name": "N/A", "title": "N/A", 
+        "description": "N/A", "due_date": None, "status": "N/A", "set_date": None
+    }
+    
+    # Create a list of dictionaries with all expected keys
+    cleaned_user_goals = []
+    for goal in user_goals_raw:
+        cleaned_goal = {key: goal.get(key, default_val) for key, default_val in expected_cols.items()}
+        cleaned_user_goals.append(cleaned_goal)
+
+    df_user_goals = pd.DataFrame(cleaned_user_goals)
+    
+    df_user_goals['due_date'] = pd.to_datetime(df_user_goals['due_date'], errors='coerce').dt.date
+    df_user_goals['set_date'] = pd.to_datetime(df_user_goals['set_date'], errors='coerce').dt.date
+
+    st.dataframe(df_user_goals.sort_values(by="due_date"), use_container_width=True, hide_index=True)
+
+    st.markdown("---")
+    st.subheader("Update Goal Status")
+
+    goal_options = [""] + [f"ID: {goal['goal_id']} - {goal['title']} (Current: {goal['status']})" for goal in cleaned_user_goals if goal.get('goal_id') is not None]
+    selected_goal_info = st.selectbox("Select Goal to Update Status", options=goal_options)
+
+    if selected_goal_info:
+        goal_id = int(selected_goal_info.split(" - ")[0].replace("ID: ", ""))
+        selected_goal = next(goal for goal in st.session_state.performance_goals if goal.get('goal_id') == goal_id)
+
+        with st.form(f"update_goal_status_form_{goal_id}"):
+            new_status = st.selectbox("New Status", ["Not Started", "In Progress", "On Hold", "Complete"], index=["Not Started", "In Progress", "On Hold", "Complete"].index(selected_goal.get('status', 'Not Started')))
+            st.write(f"Current Status: **{selected_goal.get('status', 'N/A')}**")
+            
+            update_button = st.form_submit_button("Update Status")
+
+            if update_button:
+                for i, goal in enumerate(st.session_state.performance_goals):
+                    if goal.get('goal_id') == goal_id:
+                        st.session_state.performance_goals[i]['status'] = new_status
+                        break
+                save_data(st.session_state.performance_goals, PERFORMANCE_GOALS_FILE)
+                st.success(f"Goal '{selected_goal.get('title', 'N/A')}' status updated to '{new_status}'.")
+                st.rerun()
+
+# --- Self-Appraisal (Existing) ---
+def self_appraisal():
+    st.title("✍️ Self-Appraisal")
+    st.write("Complete your self-appraisal for the current period.")
+
+    current_user_profile = st.session_state.current_user.get('profile', {})
+    
+    st.markdown("### Existing Appraisals")
+    user_appraisals_raw = [app for app in st.session_state.self_appraisals if app.get('staff_id') == current_user_profile.get('staff_id')]
+    if user_appraisals_raw:
+        # Define expected columns for robust DataFrame creation
+        expected_cols = {
+            "appraisal_id": None, "staff_id": "N/A", "staff_name": "N/A", "appraisal_period": "N/A", 
+            "achievements": "N/A", "challenges": "N/A", "development_needs": "N/A", 
+            "overall_rating": 0, "submission_date": None
+        }
+        cleaned_user_appraisals = []
+        for app in user_appraisals_raw:
+            cleaned_app = {key: app.get(key, default_val) for key, default_val in expected_cols.items()}
+            cleaned_user_appraisals.append(cleaned_app)
+
+        df_appraisals = pd.DataFrame(cleaned_user_appraisals)
+        
+        df_appraisals['submission_date'] = pd.to_datetime(df_appraisals['submission_date'], errors='coerce').dt.date
+        st.dataframe(df_appraisals.sort_values(by="submission_date", ascending=False), use_container_width=True, hide_index=True)
     else:
-        st.info("No OPEX/CAPEX requisitions submitted yet.")
+        st.info("You have not submitted any self-appraisals yet.")
+
+    st.markdown("---")
+    st.markdown("### Submit New Self-Appraisal")
+
+    with st.form("self_appraisal_form"):
+        appraisal_period = st.text_input("Appraisal Period (e.g., Q2 2024, Annual 2023)")
+        achievements = st.text_area("Key Achievements", height=150)
+        challenges = st.text_area("Challenges Faced / Obstacles Overcome", height=150)
+        development_needs = st.text_area("Development Needs / Training Required", height=100)
+        overall_rating = st.slider("Overall Performance Rating (1-5, 5 being Excellent)", 1, 5, 3)
+
+        submitted = st.form_submit_button("Submit Appraisal")
+
+        if submitted:
+            if appraisal_period and achievements:
+                new_appraisal = {
+                    "appraisal_id": len(st.session_state.self_appraisals) + 1,
+                    "staff_id": current_user_profile.get('staff_id', 'N/A'),
+                    "staff_name": current_user_profile.get('name', 'N/A'),
+                    "appraisal_period": appraisal_period,
+                    "achievements": achievements,
+                    "challenges": challenges,
+                    "development_needs": development_needs,
+                    "overall_rating": overall_rating,
+                    "submission_date": str(datetime.now().date())
+                }
+                st.session_state.self_appraisals.append(new_appraisal)
+                save_data(st.session_state.self_appraisals, SELF_APPRAISALS_FILE)
+                st.success("Self-appraisal submitted successfully!")
+                st.rerun()
+            else:
+                st.error("Appraisal Period and Key Achievements cannot be empty.")
+
+# --- HR Policies (New) ---
+def display_hr_policies():
+    st.title("📄 HR Policies")
+    st.write("Browse the company's HR policies below.")
+
+    if not st.session_state.hr_policies:
+        st.info("No HR policies available yet. Please contact your administrator.")
+        return
+
+    # Allow admin to manage policies (informative message)
+    if st.session_state.current_user and st.session_state.current_user['role'] == 'admin':
+        st.info("Administrators can manage these policies from the 'Manage HR Policies' section in the Admin panel.")
+
+    # Display policies
+    for policy_name, policy_content in st.session_state.hr_policies.items():
+        with st.expander(f"**{policy_name}**"):
+            st.markdown(policy_content)
+        st.markdown("---")
+
+# --- My Payslips (New) ---
+def display_my_payslips():
+    st.title("💰 My Payslips")
+    st.write("View and download your monthly payslips.")
+
+    current_staff_id = st.session_state.current_user.get('profile', {}).get('staff_id')
+
+    if not st.session_state.payroll_data:
+        st.info("No payroll data available yet.")
+        return
+
+    # Filter payroll data for the current user
+    user_payroll_records = [rec for rec in st.session_state.payroll_data if rec.get('staff_id') == current_staff_id]
+
+    if not user_payroll_records:
+        st.info("No payslips found for your Staff ID.")
+        return
+
+    # Define expected columns for robust DataFrame creation
+    expected_cols = {
+        "payslip_id": None, "staff_id": "N/A", "month": "N/A", "year": "N/A", "basic_salary": 0.0, 
+        "allowances": 0.0, "deductions": 0.0, "net_pay": 0.0, "generated_date": None
+    }
+    cleaned_user_payroll_records = []
+    for rec in user_payroll_records:
+        cleaned_rec = {key: rec.get(key, default_val) for key, default_val in expected_cols.items()}
+        cleaned_user_payroll_records.append(cleaned_rec)
+
+    df_payslips = pd.DataFrame(cleaned_user_payroll_records)
+    
+    # Convert month and year to datetime for proper sorting
+    # Handle potential errors if month/year are not valid
+    df_payslips['pay_period'] = pd.to_datetime(
+        df_payslips['year'].astype(str) + '-' + df_payslips['month'].astype(str), 
+        format='%Y-%m', errors='coerce' # Coerce invalid dates to NaT
+    )
+    df_payslips = df_payslips.sort_values(by="pay_period", ascending=False)
+    df_payslips['generated_date'] = pd.to_datetime(df_payslips['generated_date'], errors='coerce').dt.date
+
+    display_cols = ['month', 'year', 'basic_salary', 'allowances', 'deductions', 'net_pay', 'generated_date']
+    final_display_cols = [col for col in display_cols if col in df_payslips.columns]
+
+    st.dataframe(df_payslips[final_display_cols], use_container_width=True, hide_index=True)
+
+    st.markdown("---")
+    st.subheader("Generate Payslip PDF")
+
+    # Filter for payslips with valid IDs for selection
+    payslip_options = [""] + [f"{rec.get('month', 'N/A')}/{rec.get('year', 'N/A')} (ID: {rec.get('payslip_id', 'N/A')})" for rec in cleaned_user_payroll_records if rec.get('payslip_id') is not None]
+    selected_payslip_info = st.selectbox("Select Payslip to Generate", options=payslip_options)
+
+    if selected_payslip_info:
+        try:
+            payslip_id = int(selected_payslip_info.split("(ID: ")[1][:-1])
+        except (IndexError, ValueError):
+            st.error("Could not parse payslip ID. Please select a valid payslip.")
+            return
+
+        selected_payslip = next((rec for rec in user_payroll_records if rec.get('payslip_id') == payslip_id), None)
+
+        if selected_payslip:
+            # Get full user profile for payslip details
+            payslip_user_profile = next((user.get('profile', {}) for user in st.session_state.users if user.get('profile', {}).get('staff_id') == selected_payslip.get('staff_id')), None)
+
+            if payslip_user_profile:
+                pdf_buffer = generate_payslip_pdf(selected_payslip, payslip_user_profile)
+                st.download_button(
+                    label=f"Download Payslip for {selected_payslip.get('month', 'N/A')}/{selected_payslip.get('year', 'N/A')}",
+                    data=pdf_buffer,
+                    file_name=f"Payslip_{selected_payslip.get('month', 'N/A')}_{selected_payslip.get('year', 'N/A')}_{selected_payslip.get('staff_id', 'N/A')}.pdf",
+                    mime="application/pdf"
+                )
+            else:
+                st.error("User profile not found for this payslip.")
+        else:
+            st.error("Selected payslip record not found.")
+
+# --- PDF Generation for Payslip (New) ---
+def generate_payslip_pdf(payslip_record, user_profile):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+
+    # Header
+    pdf.set_font("Arial", 'B', 16)
+    pdf.cell(0, 10, "Polaris Digitech - Payslip", 0, 1, 'C')
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(0, 10, f"For: {payslip_record.get('month', 'N/A')}/{payslip_record.get('year', 'N/A')}", 0, 1, 'C')
+    pdf.ln(10)
+
+    # Employee Details
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(0, 10, "Employee Details:", 0, 1, 'L')
+    pdf.set_font("Arial", '', 10)
+    pdf.cell(0, 7, f"Name: {user_profile.get('name', 'N/A')}", 0, 1)
+    pdf.cell(0, 7, f"Staff ID: {user_profile.get('staff_id', 'N/A')}", 0, 1)
+    pdf.cell(0, 7, f"Department: {user_profile.get('department', 'N/A')}", 0, 1)
+    pdf.cell(0, 7, f"Grade Level: {user_profile.get('grade_level', 'N/A')}", 0, 1)
+    pdf.ln(5)
+
+    # Earnings
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(0, 10, "Earnings:", 0, 1, 'L')
+    pdf.set_font("Arial", '', 10)
+    pdf.cell(80, 7, "Basic Salary:", 0, 0, 'L')
+    pdf.cell(0, 7, f"₦{payslip_record.get('basic_salary', 0):,.2f}", 0, 1, 'R')
+    pdf.cell(80, 7, "Allowances:", 0, 0, 'L')
+    pdf.cell(0, 7, f"₦{payslip_record.get('allowances', 0):,.2f}", 0, 1, 'R')
+    pdf.ln(5)
+
+    # Deductions
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(0, 10, "Deductions:", 0, 1, 'L')
+    pdf.set_font("Arial", '', 10)
+    pdf.cell(80, 7, "Total Deductions:", 0, 0, 'L')
+    pdf.cell(0, 7, f"₦{payslip_record.get('deductions', 0):,.2f}", 0, 1, 'R')
+    pdf.ln(5)
+
+    # Net Pay
+    pdf.set_font("Arial", 'B', 14)
+    pdf.cell(80, 10, "Net Pay:", 0, 0, 'L')
+    pdf.cell(0, 10, f"₦{payslip_record.get('net_pay', 0):,.2f}", 0, 1, 'R')
+    pdf.ln(10)
+
+    pdf.set_font("Arial", 'I', 8)
+    pdf.cell(0, 5, f"Generated on: {payslip_record.get('generated_date', datetime.now().date()).strftime('%Y-%m-%d')}", 0, 1, 'C')
+
+    # Save the PDF to a BytesIO object
+    buffer = BytesIO()
+    pdf.output(buffer)
+    buffer.seek(0)
+    return buffer
+
+# --- Admin Section: Manage Users (New) ---
+def admin_manage_users():
+    st.title("👥 Admin Panel - Manage Users")
+
+    if st.session_state.current_user and st.session_state.current_user['role'] == 'admin':
+        st.subheader("Add New Staff Member")
+        with st.form("add_staff_form", clear_on_submit=True):
+            new_staff_name = st.text_input("Staff Name (e.g., John Doe)", key="new_staff_name_input")
+            new_staff_username = st.text_input("Login Username (e.g., john.doe@example.com / john_doe)", help="This will be the user's login ID.", key="new_staff_username_input")
+            new_staff_id = st.text_input("Staff ID (e.g., POL/2024/XXX)", help="Unique identifier for the staff.", key="new_staff_id_input")
+            
+            # Initial generic password
+            st.info("New staff members will be assigned a generic password: **123456** (They can change it on their profile page)")
+            
+            col_add_staff1, col_add_staff2 = st.columns(2)
+            with col_add_staff1:
+                if st.form_submit_button("Add Staff"):
+                    if new_staff_name and new_staff_username and new_staff_id:
+                        if any(user['username'] == new_staff_username for user in st.session_state.users):
+                            st.error("Username already exists!")
+                        elif any(user.get('profile', {}).get('staff_id') == new_staff_id for user in st.session_state.users):
+                            st.error("Staff ID already exists!")
+                        else:
+                            new_user = {
+                                "username": new_staff_username,
+                                "password": pbkdf2_sha256.hash("123456"), # Generic password
+                                "role": "staff", # Default role
+                                "staff_id": new_staff_id, # Store here for easy lookup
+                                "profile": {
+                                    "name": new_staff_name,
+                                    "staff_id": new_staff_id, # Redundant but good for quick profile access
+                                    "date_of_birth": "", # To be completed by staff
+                                    "gender": "", # To be completed by staff
+                                    "grade_level": "", # To be completed by staff
+                                    "department": "Unassigned", # Default, can be updated by staff/admin
+                                    "education_background": "",
+                                    "professional_experience": "",
+                                    "address": "",
+                                    "phone_number": "",
+                                    "email_address": new_staff_username,
+                                    "training_attended": [],
+                                    "work_anniversary": str(date.today()) # Default to today
+                                }
+                            }
+                            st.session_state.users.append(new_user)
+                            save_data(st.session_state.users, USERS_FILE)
+                            st.success(f"Staff member '{new_staff_name}' with Staff ID '{new_staff_id}' added successfully!")
+                            st.rerun()
+                    else:
+                        st.error("Please fill in Staff Name, Login Username, and Staff ID.")
+            with col_add_staff2:
+                if st.form_submit_button("Clear Form", type="secondary"):
+                    pass # Handled by clear_on_submit=True
+
+        st.markdown("---")
+        st.subheader("All Staff Members")
+
+        if st.session_state.users:
+            # Filter out the admin user for regular staff display if desired, or display all
+            display_users = [user for user in st.session_state.users if user['role'] == 'staff']
+            
+            if display_users:
+                # Prepare data robustly for DataFrame creation
+                cleaned_users_for_df = []
+                expected_profile_cols = [
+                    "name", "staff_id", "date_of_birth", "gender", "grade_level", 
+                    "department", "education_background", "professional_experience", 
+                    "address", "phone_number", "email_address", "work_anniversary"
+                ]
+                for user in display_users:
+                    profile = user.get('profile', {})
+                    cleaned_profile = {col: profile.get(col, '') for col in expected_profile_cols}
+                    cleaned_users_for_df.append(cleaned_profile)
+
+                df_users = pd.DataFrame(cleaned_users_for_df)
+                
+                # Convert date strings to date objects for sorting and display
+                df_users['date_of_birth'] = df_users['date_of_birth'].apply(lambda x: datetime.strptime(x, '%Y-%m-%d').date() if isinstance(x, str) and x else None)
+                df_users['work_anniversary'] = df_users['work_anniversary'].apply(lambda x: datetime.strptime(x, '%Y-%m-%d').date() if isinstance(x, str) and x else None)
+                
+                # Format dates for display
+                df_users['date_of_birth'] = df_users['date_of_birth'].apply(lambda x: x.strftime('%Y-%m-%d') if x else 'N/A')
+                df_users['work_anniversary'] = df_users['work_anniversary'].apply(lambda x: x.strftime('%Y-%m-%d') if x else 'N/A')
+
+                display_cols = [
+                    "name", "staff_id", "gender", "department", "grade_level",
+                    "date_of_birth", "email_address", "phone_number", "address", "work_anniversary"
+                ]
+                final_display_cols = [col for col in display_cols if col in df_users.columns]
+
+                st.dataframe(df_users[final_display_cols], use_container_width=True, hide_index=True)
+            else:
+                st.info("No staff members added yet (excluding admin).")
+        else:
+            st.info("No users registered in the system.")
+        
+        st.markdown("---")
+        st.subheader("Edit/Delete Staff Member")
+
+        # Create options robustly
+        user_to_edit_options = [""] + sorted([user.get('profile', {}).get('name', user['username']) for user in st.session_state.users if user['role'] == 'staff'])
+        selected_user_name = st.selectbox("Select Staff Member to Edit/Delete", options=user_to_edit_options, key="edit_staff_select")
+
+        if selected_user_name:
+            selected_user_obj = next((user for user in st.session_state.users if user.get('profile', {}).get('name') == selected_user_name or user['username'] == selected_user_name), None)
+
+            if selected_user_obj:
+                selected_user_index = st.session_state.users.index(selected_user_obj)
+                current_profile = selected_user_obj['profile']
+
+                with st.form(f"edit_staff_form_{selected_user_obj['staff_id']}"):
+                    st.write(f"Editing: **{current_profile.get('name', 'N/A')}** (Login: {selected_user_obj['username']})")
+                    
+                    # Use .get() with default values for robustness in update form
+                    updated_name = st.text_input("Full Name", value=current_profile.get('name', ''))
+                    st.text_input("Staff ID", value=current_profile.get('staff_id', ''), disabled=True)
+                    
+                    # Ensure date_of_birth is a date object for date_input
+                    dob_val = None
+                    if current_profile.get("date_of_birth"):
+                        try:
+                            dob_val = datetime.strptime(current_profile["date_of_birth"], '%Y-%m-%d').date()
+                        except ValueError:
+                            dob_val = date.today() # Default if existing is invalid
+                    else:
+                        dob_val = date.today()
+
+                    updated_dob = st.date_input("Date of Birth", value=dob_val)
+                    updated_gender = st.selectbox("Gender", ["Male", "Female", "Other"], index=["Male", "Female", "Other"].index(current_profile.get("gender", "Male")))
+                    updated_grade_level = st.text_input("Grade Level", value=current_profile.get('grade_level', ''))
+                    
+                    department_options = ["Admin", "HR", "Finance", "IT", "Marketing", "Operations", "Sales", "Executive", "Administration", "CV", "Other", "Unassigned"]
+                    current_dept = current_profile.get("department", "Unassigned")
+                    current_dept_index = department_options.index(current_dept) if current_dept in department_options else 0
+                    updated_department = st.selectbox("Department", options=department_options, index=current_dept_index)
+
+                    updated_address = st.text_area("Address", value=current_profile.get('address', ''))
+                    updated_phone = st.text_input("Phone Number", value=current_profile.get('phone_number', ''))
+                    st.text_input("Email Address (Login ID)", value=selected_user_obj['username'], disabled=True)
+                    
+                    # Work Anniversary
+                    anniversary_val = None
+                    if current_profile.get("work_anniversary"):
+                        try:
+                            anniversary_val = datetime.strptime(current_profile["work_anniversary"], '%Y-%m-%d').date()
+                        except ValueError:
+                            anniversary_val = date.today() # Default if existing is invalid
+                    else:
+                        anniversary_val = date.today()
+                    updated_work_anniversary = st.date_input("Work Anniversary", value=anniversary_val)
+
+                    col_edit_del1, col_edit_del2 = st.columns(2)
+                    with col_edit_del1:
+                        if st.form_submit_button("Update Staff"):
+                            st.session_state.users[selected_user_index]['profile']['name'] = updated_name
+                            st.session_state.users[selected_user_index]['profile']['date_of_birth'] = str(updated_dob)
+                            st.session_state.users[selected_user_index]['profile']['gender'] = updated_gender
+                            st.session_state.users[selected_user_index]['profile']['grade_level'] = updated_grade_level
+                            st.session_state.users[selected_user_index]['profile']['department'] = updated_department
+                            st.session_state.users[selected_user_index]['profile']['address'] = updated_address
+                            st.session_state.users[selected_user_index]['profile']['phone_number'] = updated_phone
+                            st.session_state.users[selected_user_index]['profile']['work_anniversary'] = str(updated_work_anniversary) # Save as string
+                            
+                            save_data(st.session_state.users, USERS_FILE)
+                            st.success(f"Staff '{updated_name}' updated successfully!")
+                            st.rerun()
+                    with col_edit_del2:
+                        if st.form_submit_button("Delete Staff", type="primary"):
+                            # Filter out the selected user
+                            st.session_state.users = [user for user in st.session_state.users if user['username'] != selected_user_obj['username']]
+                            save_data(st.session_state.users, USERS_FILE)
+
+                            # Clean up associated data (leave, opex/capex, goals, appraisals, payroll) based on staff_id
+                            staff_id_to_delete = current_profile.get('staff_id')
+                            if staff_id_to_delete:
+                                st.session_state.leave_requests = [req for req in st.session_state.leave_requests if req.get('staff_id') != staff_id_to_delete]
+                                save_data(st.session_state.leave_requests, LEAVE_REQUESTS_FILE)
+
+                                st.session_state.opex_capex_requests = [req for req in st.session_state.opex_capex_requests if req.get('requester_staff_id') != staff_id_to_delete]
+                                save_data(st.session_state.opex_capex_requests, OPEX_CAPEX_REQUESTS_FILE)
+
+                                st.session_state.performance_goals = [goal for goal in st.session_state.performance_goals if goal.get('staff_id') != staff_id_to_delete]
+                                save_data(st.session_state.performance_goals, PERFORMANCE_GOALS_FILE)
+
+                                st.session_state.self_appraisals = [app for app in st.session_state.self_appraisals if app.get('staff_id') != staff_id_to_delete]
+                                save_data(st.session_state.self_appraisals, SELF_APPRAISALS_FILE)
+
+                                st.session_state.payroll_data = [pay for pay in st.session_state.payroll_data if pay.get('staff_id') != staff_id_to_delete]
+                                save_data(st.session_state.payroll_data, PAYROLL_FILE)
+
+                            st.success(f"Staff '{current_profile.get('name', 'N/A')}' deleted successfully!")
+                            st.rerun()
+            else:
+                st.warning("Selected user not found. Please refresh.")
+    else:
+        st.info("Select a staff member to edit or delete.")
 
 
-# Admin: Manage Beneficiaries (New)
+# --- Admin Section: Upload Payroll (New) ---
+def admin_upload_payroll():
+    st.title("📤 Admin Panel - Upload Payroll")
+    st.write("Upload payroll data as a CSV file. The CSV should contain columns: `staff_id`, `month` (e.g., 1-12), `year` (e.g., 2024), `basic_salary`, `allowances`, `deductions`, `net_pay`.")
+
+    uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+
+    if uploaded_file is not None:
+        try:
+            df_payroll = pd.read_csv(uploaded_file)
+            st.dataframe(df_payroll, use_container_width=True, hide_index=True)
+
+            required_cols = ['staff_id', 'month', 'year', 'basic_salary', 'allowances', 'deductions', 'net_pay']
+            if not all(col in df_payroll.columns for col in required_cols):
+                st.error(f"Missing required columns in CSV. Please ensure the file contains: {', '.join(required_cols)}")
+            else:
+                if st.button("Process and Save Payroll Data"):
+                    new_or_updated_payroll_records = []
+                    
+                    # Create a temporary lookup for existing payroll to easily check/update
+                    payroll_lookup = {}
+                    for p_rec in st.session_state.payroll_data:
+                        key = (p_rec.get('staff_id'), p_rec.get('month'), p_rec.get('year'))
+                        if all(x is not None for x in key):
+                            payroll_lookup[key] = p_rec
+
+                    for index, row in df_payroll.iterrows():
+                        try:
+                            # Basic validation and type conversion
+                            staff_id = str(row['staff_id']).strip()
+                            month = int(row['month'])
+                            year = int(row['year'])
+                            basic_salary = float(row['basic_salary'])
+                            allowances = float(row['allowances'])
+                            deductions = float(row['deductions'])
+                            net_pay = float(row['net_pay'])
+
+                            # Check if staff_id exists in users (using .get() for robustness)
+                            if not any(user.get('profile', {}).get('staff_id') == staff_id for user in st.session_state.users):
+                                st.warning(f"Skipping payroll for unknown Staff ID: {staff_id} in row {index+1}.")
+                                continue
+                            
+                            current_payslip_key = (staff_id, month, year)
+                            
+                            payslip_data = {
+                                "payslip_id": payroll_lookup.get(current_payslip_key, {}).get('payslip_id', len(st.session_state.payroll_data) + len(new_or_updated_payroll_records) + 1),
+                                "staff_id": staff_id,
+                                "month": month,
+                                "year": year,
+                                "basic_salary": basic_salary,
+                                "allowances": allowances,
+                                "deductions": deductions,
+                                "net_pay": net_pay,
+                                "generated_date": str(date.today())
+                            }
+                            
+                            if current_payslip_key in payroll_lookup:
+                                # Update existing record in place
+                                for i, p_rec in enumerate(st.session_state.payroll_data):
+                                    if (p_rec.get('staff_id'), p_rec.get('month'), p_rec.get('year')) == current_payslip_key:
+                                        st.session_state.payroll_data[i] = payslip_data
+                                        st.info(f"Updated payslip for {staff_id} - {month}/{year}")
+                                        break
+                            else:
+                                new_or_updated_payroll_records.append(payslip_data)
+
+                        except ValueError as ve:
+                            st.error(f"Data conversion error in row {index+1}: {ve}. Please check numeric fields and dates.")
+                            continue
+                        except KeyError as ke:
+                            st.error(f"Missing column in row {index+1}: {ke}. Please check CSV headers.")
+                            continue
+                        except Exception as ex:
+                            st.error(f"An unexpected error occurred in row {index+1}: {ex}")
+                            continue
+
+                    # Add genuinely new records
+                    st.session_state.payroll_data.extend(new_or_updated_payroll_records)
+                    save_data(st.session_state.payroll_data, PAYROLL_FILE)
+                    st.success("Payroll data uploaded and processed successfully!")
+                    st.rerun()
+
+        except Exception as e:
+            st.error(f"Error reading or processing CSV: {e}")
+
+# --- Admin Section: Manage Beneficiaries (New) ---
 def admin_manage_beneficiaries():
-    st.title("🏦 Admin: Manage Beneficiaries")
-    st.write("Add, edit, or delete beneficiary bank details for payments.")
+    st.title("🏦 Admin Panel - Manage Beneficiaries")
 
     st.subheader("Current Beneficiaries")
-    if st.session_state.beneficiaries:
-        # Exclude the "Other" option for display purposes if it's just a placeholder
-        display_beneficiaries = {k: v for k, v in st.session_state.beneficiaries.items() if k != "Other (Manually Enter Details)"}
-        
-        if display_beneficiaries:
-            df_beneficiaries = pd.DataFrame.from_dict(display_beneficiaries, orient='index')
-            df_beneficiaries.index.name = "Beneficiary Name"
-            st.dataframe(df_beneficiaries, use_container_width=True)
+    # Exclude the "Other (Manually Enter Details)" option from the display table
+    display_beneficiaries = {k: v for k, v in st.session_state.beneficiaries.items() if k != "Other (Manually Enter Details)"}
 
-            # Option to delete beneficiaries
-            st.markdown("---")
-            st.subheader("Delete Beneficiary")
-            beneficiary_to_delete = st.selectbox("Select beneficiary to delete", list(display_beneficiaries.keys()), key="delete_beneficiary_select")
-            if st.button("Delete Selected Beneficiary", key="delete_beneficiary_button"):
-                if beneficiary_to_delete:
-                    del st.session_state.beneficiaries[beneficiary_to_delete]
-                    save_data(st.session_state.beneficiaries, BENEFICIARIES_FILE)
-                    st.success(f"Beneficiary '{beneficiary_to_delete}' deleted.")
-                    st.rerun()
-                else:
-                    st.warning("Please select a beneficiary to delete.")
-        else:
-            st.info("No beneficiaries added yet (excluding manual entry option).")
+    if display_beneficiaries:
+        df_beneficiaries = pd.DataFrame(display_beneficiaries).T.reset_index()
+        df_beneficiaries.columns = ['Beneficiary Name', 'Account Name', 'Account No', 'Bank']
+        st.dataframe(df_beneficiaries, use_container_width=True, hide_index=True)
     else:
-        st.info("No beneficiaries data loaded.")
+        st.info("No beneficiaries added yet.")
 
     st.markdown("---")
     st.subheader("Add New Beneficiary")
-    with st.form("add_beneficiary_form"):
-        new_beneficiary_name = st.text_input("Beneficiary Name (e.g., Company Name)", key="new_beneficiary_name")
-        new_account_name = st.text_input("Account Name", key="new_account_name")
-        new_account_no = st.text_input("Account Number", key="new_account_no")
-        new_bank = st.text_input("Bank Name", key="new_bank")
-        
-        add_beneficiary_button = st.form_submit_button("Add Beneficiary")
+    with st.form("add_beneficiary_form", clear_on_submit=True):
+        b_name = st.text_input("Beneficiary Name (e.g., Vendor Company Ltd)")
+        b_acc_name = st.text_input("Account Name")
+        b_acc_no = st.text_input("Account Number")
+        b_bank = st.text_input("Bank Name")
 
-        if add_beneficiary_button:
-            if new_beneficiary_name and new_account_name and new_account_no and new_bank:
-                if new_beneficiary_name in st.session_state.beneficiaries:
-                    st.error("Beneficiary name already exists. Please choose a unique name or edit the existing one.")
+        if st.form_submit_button("Add Beneficiary"):
+            if b_name and b_acc_name and b_acc_no and b_bank:
+                if b_name in st.session_state.beneficiaries:
+                    st.warning("Beneficiary with this name already exists. Use update section to modify.")
                 else:
-                    st.session_state.beneficiaries[new_beneficiary_name] = {
-                        "Account Name": new_account_name,
-                        "Account No": new_account_no,
-                        "Bank": new_bank
+                    st.session_state.beneficiaries[b_name] = {
+                        "Account Name": b_acc_name,
+                        "Account No": b_acc_no,
+                        "Bank": b_bank
                     }
                     save_data(st.session_state.beneficiaries, BENEFICIARIES_FILE)
-                    st.success(f"Beneficiary '{new_beneficiary_name}' added successfully!")
+                    st.success(f"Beneficiary '{b_name}' added.")
                     st.rerun()
             else:
-                st.error("All fields are required to add a new beneficiary.")
-
-
-# Admin: Manage HR Policies (New)
-def admin_manage_hr_policies():
-    st.title("📜 Admin: Manage HR Policies")
-    st.write("Add, edit, or delete company HR policies.")
-
-    st.subheader("Existing HR Policies")
-    policies = st.session_state.hr_policies
-    
-    if policies:
-        policy_titles = list(policies.keys())
-        
-        # Display existing policies in a read-only manner first
-        st.markdown("---")
-        st.markdown("#### View/Edit Policies")
-        selected_policy_to_edit = st.selectbox("Select a policy to view/edit", options=policy_titles, key="edit_policy_select")
-        
-        if selected_policy_to_edit:
-            current_content = policies.get(selected_policy_to_edit, "")
-            edited_policy_title = st.text_input("Policy Title", value=selected_policy_to_edit, key="edited_policy_title")
-            edited_policy_content = st.text_area("Policy Content", value=current_content, height=300, key="edited_policy_content")
-            
-            col_edit1, col_edit2 = st.columns(2)
-            with col_edit1:
-                if st.button("Save Edited Policy", key="save_edited_policy_btn"):
-                    if edited_policy_title and edited_policy_content:
-                        # If title changed, delete old entry and add new one
-                        if edited_policy_title != selected_policy_to_edit:
-                            del st.session_state.hr_policies[selected_policy_to_edit]
-                        st.session_state.hr_policies[edited_policy_title] = edited_policy_content
-                        save_data(st.session_state.hr_policies, HR_POLICIES_FILE)
-                        st.success(f"Policy '{edited_policy_title}' updated successfully!")
-                        st.rerun()
-                    else:
-                        st.error("Policy title and content cannot be empty.")
-            with col_edit2:
-                if st.button("Delete Policy", key="delete_policy_btn"):
-                    if selected_policy_to_edit in st.session_state.hr_policies:
-                        del st.session_state.hr_policies[selected_policy_to_edit]
-                        save_data(st.session_state.hr_policies, HR_POLICIES_FILE)
-                        st.success(f"Policy '{selected_policy_to_edit}' deleted.")
-                        st.rerun()
-        else:
-            st.info("No policies to display for editing.")
-    else:
-        st.info("No HR policies available yet. Add one below!")
+                st.error("Please fill all beneficiary fields.")
 
     st.markdown("---")
-    st.subheader("Add New HR Policy")
-    with st.form("add_policy_form"):
-        new_policy_title = st.text_input("New Policy Title", key="new_policy_title_input")
-        new_policy_content = st.text_area("New Policy Content", height=200, key="new_policy_content_input")
+    st.subheader("Update/Delete Beneficiary")
+    # Only allow selection of actual beneficiaries, not the "Other" placeholder
+    b_edit_options = [""] + [k for k in st.session_state.beneficiaries.keys() if k != "Other (Manually Enter Details)"]
+    selected_b_name = st.selectbox("Select Beneficiary to Update/Delete", options=b_edit_options)
+
+    if selected_b_name:
+        selected_b_data = st.session_state.beneficiaries.get(selected_b_name, {})
+        with st.form(f"edit_beneficiary_form_{selected_b_name}"):
+            updated_b_acc_name = st.text_input("Account Name", value=selected_b_data.get("Account Name", ""))
+            updated_b_acc_no = st.text_input("Account Number", value=selected_b_data.get("Account No", ""))
+            updated_b_bank = st.text_input("Bank Name", value=selected_b_data.get("Bank", ""))
+
+            col_b_edit, col_b_del = st.columns(2)
+            with col_b_edit:
+                if st.form_submit_button("Update Beneficiary"):
+                    if updated_b_acc_name and updated_b_acc_no and updated_b_bank:
+                        st.session_state.beneficiaries[selected_b_name] = {
+                            "Account Name": updated_b_acc_name,
+                            "Account No": updated_b_acc_no,
+                            "Bank": updated_b_bank
+                        }
+                        save_data(st.session_state.beneficiaries, BENEFICIARIES_FILE)
+                        st.success(f"Beneficiary '{selected_b_name}' updated.")
+                        st.rerun()
+                    else:
+                        st.error("Please fill all update fields.")
+            with col_b_del:
+                if st.form_submit_button("Delete Beneficiary", type="primary"):
+                    # Add confirmation to delete
+                    st.warning(f"Are you sure you want to delete '{selected_b_name}'?")
+                    if st.button(f"Confirm Delete '{selected_b_name}'", key=f"confirm_delete_b_{selected_b_name}"):
+                        del st.session_state.beneficiaries[selected_b_name]
+                        save_data(st.session_state.beneficiaries, BENEFICIARIES_FILE)
+                        st.success(f"Beneficiary '{selected_b_name}' deleted.")
+                        st.rerun()
+    else:
+        st.info("Select a beneficiary to update or delete.")
+
+
+# --- Admin Section: Manage HR Policies (New) ---
+def admin_manage_hr_policies():
+    st.title("📜 Admin Panel - Manage HR Policies")
+
+    st.subheader("Edit Existing Policies")
+    policy_names = list(st.session_state.hr_policies.keys())
+    selected_policy_name = st.selectbox("Select Policy to Edit", options=[""] + policy_names)
+
+    if selected_policy_name:
+        current_policy_content = st.session_state.hr_policies.get(selected_policy_name, "")
+        updated_policy_content = st.text_area(f"Edit Content for {selected_policy_name}", value=current_policy_content, height=400)
         
-        add_policy_button = st.form_submit_button("Add Policy")
-        
-        if add_policy_button:
-            if new_policy_title and new_policy_content:
-                if new_policy_title in st.session_state.hr_policies:
-                    st.error("A policy with this title already exists. Please choose a different title or edit the existing policy.")
-                else:
-                    st.session_state.hr_policies[new_policy_title] = new_policy_content
+        col_policy_edit, col_policy_delete = st.columns(2)
+        with col_policy_edit:
+            if st.button(f"Save Changes to {selected_policy_name}"):
+                st.session_state.hr_policies[selected_policy_name] = updated_policy_content
+                save_data(st.session_state.hr_policies, HR_POLICIES_FILE)
+                st.success(f"Policy '{selected_policy_name}' updated successfully!")
+                st.rerun()
+        with col_policy_delete:
+            if st.button(f"Delete {selected_policy_name} Policy", type="primary"):
+                # Add confirmation for deletion
+                st.warning(f"Are you sure you want to delete the '{selected_policy_name}' policy?")
+                if st.button(f"Confirm Delete Policy '{selected_policy_name}'", key=f"confirm_delete_policy_{selected_policy_name}"):
+                    del st.session_state.hr_policies[selected_policy_name]
                     save_data(st.session_state.hr_policies, HR_POLICIES_FILE)
-                    st.success(f"Policy '{new_policy_title}' added successfully!")
+                    st.success(f"Policy '{selected_policy_name}' deleted.")
+                    st.rerun()
+
+    st.markdown("---")
+    st.subheader("Add New Policy")
+    with st.form("add_policy_form", clear_on_submit=True):
+        new_policy_name = st.text_input("New Policy Name")
+        new_policy_content = st.text_area("New Policy Content", height=300)
+
+        if st.form_submit_button("Add New Policy"):
+            if new_policy_name and new_policy_content:
+                if new_policy_name in st.session_state.hr_policies:
+                    st.error("Policy with this name already exists. Please choose a different name or edit the existing policy.")
+                else:
+                    st.session_state.hr_policies[new_policy_name] = new_policy_content
+                    save_data(st.session_state.hr_policies, HR_POLICIES_FILE)
+                    st.success(f"New policy '{new_policy_name}' added successfully!")
                     st.rerun()
             else:
-                st.error("Policy title and content cannot be empty.")
+                st.error("Please provide both a name and content for the new policy.")
 
+# --- Main Application Logic ---
+def main():
+    setup_initial_data() # Ensure initial data is set up on first run or if files are empty
 
-# --- Main App Logic ---
-if __name__ == "__main__":
-    setup_initial_data() # Ensure initial data exists on first run
+    if not st.session_state.logged_in:
+        login_form()
+    else:
+        display_sidebar()
 
-    display_sidebar()
-
-    if st.session_state.logged_in:
+        # Display the selected page based on session state
         if st.session_state.current_page == "dashboard":
             display_dashboard()
         elif st.session_state.current_page == "my_profile":
             display_my_profile()
         elif st.session_state.current_page == "leave_request":
             leave_request_form()
+        elif st.session_state.current_page == "view_leave_applications":
+            view_leave_applications()
+        elif st.session_state.current_page == "opex_capex_form":
+            opex_capex_form()
+        elif st.session_state.current_page == "manage_opex_capex_approvals": # New page
+            # Only admin can access this
+            if st.session_state.current_user and st.session_state.current_user['role'] == 'admin':
+                manage_opex_capex_approvals()
+            else:
+                st.error("Access Denied: You do not have permission to view this page.")
+                st.session_state.current_page = "dashboard" # Redirect to dashboard
+                st.rerun()
+        elif st.session_state.current_page == "view_opex_capex_requests":
+            view_opex_capex_requests()
         elif st.session_state.current_page == "performance_goal_setting":
             performance_goal_setting()
         elif st.session_state.current_page == "self_appraisal":
             self_appraisal()
-        elif st.session_state.current_page == "hr_policies":
-            hr_policies()
-        elif st.session_state.current_page == "my_payslips":
-            my_payslips()
-        elif st.session_state.current_page == "opex_capex_form":
-            opex_capex_form()
-        # Admin Pages
-        elif st.session_state.current_page == "manage_users":
+        elif st.session_state.current_page == "hr_policies": # New page
+            display_hr_policies()
+        elif st.session_state.current_page == "my_payslips": # New page
+            display_my_payslips()
+        elif st.session_state.current_page == "manage_users": # New admin page
             if st.session_state.current_user and st.session_state.current_user['role'] == 'admin':
                 admin_manage_users()
             else:
                 st.error("Access Denied: You do not have permission to view this page.")
                 st.session_state.current_page = "dashboard"
                 st.rerun()
-        elif st.session_state.current_page == "upload_payroll":
+        elif st.session_state.current_page == "upload_payroll": # New admin page
             if st.session_state.current_user and st.session_state.current_user['role'] == 'admin':
                 admin_upload_payroll()
             else:
                 st.error("Access Denied: You do not have permission to view this page.")
                 st.session_state.current_page = "dashboard"
                 st.rerun()
-        elif st.session_state.current_page == "manage_opex_capex_approvals":
-            # This page is for anyone in the approval chain, not just 'admin' role
-            # It relies on checking department/grade_level against APPROVAL_CHAIN
-            is_approver = False
-            current_user_profile = st.session_state.current_user.get('profile', {})
-            current_user_department = current_user_profile.get('department')
-            current_user_grade = current_user_profile.get('grade_level')
-            
-            for stage in APPROVAL_CHAIN:
-                if (current_user_department == stage['department'] and
-                    current_user_grade == stage['grade_level']):
-                    is_approver = True
-                    break
-            
-            if st.session_state.current_user and (st.session_state.current_user['role'] == 'admin' or is_approver):
-                admin_manage_opex_capex_approvals()
-            else:
-                st.error("Access Denied: You do not have permission to view this page.")
-                st.session_state.current_page = "dashboard"
-                st.rerun()
-        elif st.session_state.current_page == "manage_beneficiaries":
+        elif st.session_state.current_page == "manage_beneficiaries": # New admin page
             if st.session_state.current_user and st.session_state.current_user['role'] == 'admin':
                 admin_manage_beneficiaries()
             else:
                 st.error("Access Denied: You do not have permission to view this page.")
                 st.session_state.current_page = "dashboard"
                 st.rerun()
-        elif st.session_state.current_page == "manage_hr_policies":
+        elif st.session_state.current_page == "manage_hr_policies": # New admin page
             if st.session_state.current_user and st.session_state.current_user['role'] == 'admin':
                 admin_manage_hr_policies()
             else:
                 st.error("Access Denied: You do not have permission to view this page.")
                 st.session_state.current_page = "dashboard"
                 st.rerun()
-    else:
-        login_form()
+
+if __name__ == "__main__":
+    main()
