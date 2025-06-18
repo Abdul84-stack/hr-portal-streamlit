@@ -39,9 +39,15 @@ os.makedirs("leave_documents", exist_ok=True)
 os.makedirs("opex_capex_documents", exist_ok=True)
 
 
-LOGO_FILE_NAME = "polaris_digitech_logo.png"
-LOGO_PATH = "Project_Resources/polaris_digitech_logo.png" # Direct string path
+# LOGO_FILE_NAME = "polaris_digitech_logo.png"
+# LOGO_PATH = os.path.join(ICON_BASE_DIR, LOGO_FILE_NAME)
 
+# ABDULAHI_IMAGE_FILE_NAME = "abdulahi_image.png"
+# ABDULAHI_IMAGE_PATH = os.path.join(ICON_BASE_DIR, ABDULAHI_IMAGE_FILE_NAME)
+
+# --- TEMPORARY TEST PATH FOR LOGO (FOR DEBUGGING) ---
+LOGO_PATH = "test_logo.png" # Direct path to the new test image in the root
+# --- END TEMPORARY TEST PATH ---
 
 # --- Define Approval Route Roles and simulate emails (Updated to fetch from users) ---
 # These are the *stages* in the approval chain, mapped to department/grade levels
